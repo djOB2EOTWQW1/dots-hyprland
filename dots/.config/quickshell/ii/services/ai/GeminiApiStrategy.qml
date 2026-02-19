@@ -1,20 +1,21 @@
 import QtQuick
 import qs.modules.common.functions as CF
-
 ApiStrategy {
     readonly property string apiKeyEnvVarName: "API_KEY"
-    readonly property string fileUriVarName: "file_uri"
+    readonly property string fileDataVarName: "BASE64_DATA"
     readonly property string fileMimeTypeVarName: "MIME_TYPE"
-    readonly property string fileUriSubstitutionString: "{{ fileUriVarName }}"
+    readonly property string fileDataSubstitutionString: "{{ fileDataVarName }}"
     readonly property string fileMimeTypeSubstitutionString: "{{ fileMimeTypeVarName }}"
     property string buffer: ""
-    
+
     function buildEndpoint(model: AiModel): string {
-        const result = model.endpoint + `?key=\$\{${root.apiKeyEnvVarName}\}`
+        // Replace the base URL with ProxyAPI's Google proxy base
+        const proxyBase = "https://api.proxyapi.ru/google/v1beta/";
+        const originalEndpoint = model.endpoint.replace("https://generativelanguage.googleapis.com/v1beta/", proxyBase);
+        const result = originalEndpoint + `?key=\$\{${root.apiKeyEnvVarName}\}`;
         // console.log("[AI] Endpoint: " + result);
         return result;
     }
-
     function buildRequestData(model: AiModel, messages, systemPrompt: string, temperature: real, tools: list<var>, filePath: string) {
         let contents = messages.map(message => {
             // console.log("[AI] Building request data for message:", JSON.stringify(message, null, 2));
@@ -33,7 +34,7 @@ ApiStrategy {
             if (!usingSearch && message.functionResponse != undefined && message.functionName.length > 0) {
                 return {
                     "role": geminiApiRoleName,
-                    "parts": [{ 
+                    "parts": [{
                         functionResponse: {
                             "name": message.functionName,
                             "response": { "content": message.functionResponse }
@@ -45,7 +46,7 @@ ApiStrategy {
                 "role": geminiApiRoleName,
                 "parts": [
                     { text: message.rawContent },
-                    ...(message.fileUri && message.fileUri.length > 0 ? [{ 
+                    ...(message.fileUri && message.fileUri.length > 0 ? [{
                         "file_data": {
                             "mime_type": message.fileMimeType,
                             "file_uri": message.fileUri
@@ -56,11 +57,11 @@ ApiStrategy {
         })
         if (filePath && filePath.length > 0) {
             const trimmedFilePath = CF.FileUtils.trimFileProtocol(filePath);
-            // Add file_data part to the last message's parts array
+            // Add inline_data part to the last message's parts array
             contents[contents.length - 1].parts.unshift({
-                file_data: {
+                inline_data: {
                     mime_type: fileMimeTypeSubstitutionString,
-                    file_uri: fileUriSubstitutionString
+                    data: fileDataSubstitutionString
                 }
             });
         }
@@ -77,12 +78,10 @@ ApiStrategy {
         // print("Gemini API call payload:", JSON.stringify(baseData, null, 2));
         return model.extraParams ? Object.assign({}, baseData, model.extraParams) : baseData;
     }
-
     function buildAuthorizationHeader(apiKeyEnvVarName: string): string {
         // Gemini doesn't use Authorization header, key is in URL
         return "";
     }
-
     function parseResponseLine(line, message) {
         if (line.startsWith("[")) {
             buffer += line.slice(1).trim();
@@ -96,21 +95,12 @@ ApiStrategy {
         }
         return {};
     }
-
     function parseBuffer(message) {
         // console.log("[Ai] Gemini buffer: ", buffer);
         let finished = false;
         try {
             if (buffer.length === 0) return {};
             const dataJson = JSON.parse(buffer);
-
-            // Uploaded file
-            if (dataJson.uploadedFile) {
-                message.fileUri = dataJson.uploadedFile.uri;
-                message.fileMimeType = dataJson.uploadedFile.mimeType;
-                return ({})
-            }
-
             // Error response handling
             if (dataJson.error) {
                 const errorMsg = `**Error ${dataJson.error.code}**: ${dataJson.error.message}`;
@@ -118,15 +108,14 @@ ApiStrategy {
                 message.content += errorMsg;
                 return { finished: true };
             }
-
             // No candidates?
             if (!dataJson.candidates) return {};
-            
+
             // Finished?
             if (dataJson.candidates[0]?.finishReason) {
                 finished = true;
             }
-            
+
             // Function call handling
             if (dataJson.candidates[0]?.content?.parts[0]?.functionCall) {
                 const functionCall = dataJson.candidates[0]?.content?.parts[0]?.functionCall;
@@ -137,12 +126,11 @@ ApiStrategy {
                 message.content += newContent;
                 return { functionCall: { name: functionCall.name, args: functionCall.args }, finished: finished };
             }
-
             // Normal text response
             const responseContent = dataJson.candidates[0]?.content?.parts[0]?.text
             message.rawContent += responseContent;
             message.content += responseContent;
-            
+
             // Handle annotations and metadata
             const annotationSources = dataJson.candidates[0]?.groundingMetadata?.groundingChunks?.map(chunk => {
                 return {
@@ -151,7 +139,6 @@ ApiStrategy {
                     "url": chunk?.web?.uri,
                 }
             }) ?? [];
-
             const annotations = dataJson.candidates[0]?.groundingMetadata?.groundingSupports?.map(citation => {
                 return {
                     "type": "url_citation",
@@ -165,7 +152,6 @@ ApiStrategy {
             message.annotationSources = annotationSources;
             message.annotations = annotations;
             message.searchQueries = dataJson.candidates[0]?.groundingMetadata?.webSearchQueries ?? [];
-
             // Usage metadata
             if (dataJson.usageMetadata) {
                 return {
@@ -177,7 +163,7 @@ ApiStrategy {
                     finished: finished
                 };
             }
-            
+
         } catch (e) {
             console.log("[AI] Gemini: Could not parse buffer: ", e);
             message.rawContent += buffer;
@@ -187,63 +173,26 @@ ApiStrategy {
         }
         return { finished: finished };
     }
-
     function onRequestFinished(message) {
         return parseBuffer(message);
     }
-    
+
     function reset() {
         buffer = "";
     }
-
     function buildScriptFileSetup(filePath) {
         const trimmedFilePath = CF.FileUtils.trimFileProtocol(filePath);
         let content = ""
-
         // print("file path:", filePath)
         // print("trimmed file path:", trimmedFilePath)
         // print("escaped file path:", CF.StringUtils.shellSingleQuoteEscape(trimmedFilePath))
-
         content += `IMAGE_PATH='${CF.StringUtils.shellSingleQuoteEscape(trimmedFilePath)}'\n`;
         content += `${fileMimeTypeVarName}=$(file -b --mime-type "$IMAGE_PATH")\n`;
-        content += 'NUM_BYTES=$(wc -c < "${IMAGE_PATH}")\n';
-        content += 'tmp_header_file="/tmp/quickshell/ai/upload-header.tmp"\n';
-        content += 'tmp_file_info_file="/tmp/quickshell/ai/file-info.json.tmp"\n';
-
-        // Initial resumable request defining metadata.
-        // The upload url is in the response headers dump them to a file.
-        content += 'curl "https://generativelanguage.googleapis.com/upload/v1beta/files"'
-            + ` -H "x-goog-api-key: \$${apiKeyEnvVarName}"`
-            + ' -D $tmp_header_file'
-            + ' -H "X-Goog-Upload-Protocol: resumable"'
-            + ' -H "X-Goog-Upload-Command: start"'
-            + ' -H "X-Goog-Upload-Header-Content-Length: ${NUM_BYTES}"'
-            + ` -H "X-Goog-Upload-Header-Content-Type: \${${fileMimeTypeVarName}}"`
-            + ' -H "Content-Type: application/json"'
-            + ` -d "{'file': {'display_name': 'Image'}}" 2> /dev/null`
-            + '\n';
-
-        // Get file upload header
-        content += 'upload_url=$(grep -i "x-goog-upload-url: " "${tmp_header_file}" | cut -d" " -f2 | tr -d "\r")\n';
-        content += 'rm "${tmp_header_file}"\n';
-
-        // Upload the actual file
-        content += 'curl "${upload_url}"'
-            + ` -H "x-goog-api-key: \$${apiKeyEnvVarName}"`
-            + ' -H "Content-Length: ${NUM_BYTES}"'
-            + ' -H "X-Goog-Upload-Offset: 0"'
-            + ' -H "X-Goog-Upload-Command: upload, finalize"'
-            + ' --data-binary "@${IMAGE_PATH}" 2> /dev/null > "${tmp_file_info_file}"'
-            + '\n';
-
-        content += `${fileUriVarName}=$(jq -r ".file.uri" "$tmp_file_info_file")\n`
-        content += `printf "{\\"uploadedFile\\": {\\"uri\\": \\"$${fileUriVarName}\\", \\"mimeType\\": \\"$${fileMimeTypeVarName}\\"}}\\n,\\n"\n`
-
+        content += `${fileDataVarName}=$(base64 -w 0 "$IMAGE_PATH")\n`;
         return content
     }
-
     function finalizeScriptContent(scriptContent: string): string {
         return scriptContent.replace(fileMimeTypeSubstitutionString, `'"\$${fileMimeTypeVarName}"'`)
-                            .replace(fileUriSubstitutionString, `'"\$${fileUriVarName}"'`);
+        .replace(fileDataSubstitutionString, `'"\$${fileDataVarName}"'`);
     }
 }

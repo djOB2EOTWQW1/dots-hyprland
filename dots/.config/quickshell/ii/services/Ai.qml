@@ -75,7 +75,7 @@ Singleton {
         "{DISTRO}": SystemInfo.distroName,
         "{DATETIME}": `${DateTime.time}, ${DateTime.collapsedCalendarFormat}`,
         "{WINDOWCLASS}": ToplevelManager.activeToplevel?.appId ?? "Unknown",
-        "{DE}": `${SystemInfo.desktopEnvironment} (${SystemInfo.windowingSystem})` 
+        "{DE}": `${SystemInfo.desktopEnvironment} (${SystemInfo.windowingSystem})`
     }
 
     // Gemini: https://ai.google.dev/gemini-api/docs/function-calling
@@ -255,44 +255,44 @@ Singleton {
     // - api_format: The API format of the model. Can be "openai" or "gemini". Default is "openai".
     // - extraParams: Extra parameters to be passed to the model. This is a JSON object.
     property var models: Config.options.policies.ai === 2 ? {} : {
-        "gemini-2.5-flash": aiModelComponent.createObject(this, {
-            "name": "Gemini 2.5 Flash",
+        "gemini-3-pro-preview": aiModelComponent.createObject(this, {
+            "name": "Gemini 3 Pro Preview",
             "icon": "google-gemini-symbolic",
-            "description": Translation.tr("Online | Google's model\nNewer model that's slower than its predecessor but should deliver higher quality answers"),
-            "homepage": "https://aistudio.google.com",
-            "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent",
-            "model": "gemini-2.5-flash",
-            "requires_key": true,
-            "key_id": "gemini",
-            "key_get_link": "https://aistudio.google.com/app/apikey",
-            "key_get_description": Translation.tr("**Pricing**: free. Data used for training.\n\n**Instructions**: Log into Google account, allow AI Studio to create Google Cloud project or whatever it asks, go back and click Get API key"),
-            "api_format": "gemini",
+            "description": Translation.tr("Онлайн | Модель Google\nОчень дорогая модель. Использовать только для программирования или очень сложных задач."),
+                                                              "homepage": "https://aistudio.google.com",
+                                                              "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent",
+                                                              "model": "gemini-3-pro-preview",
+                                                              "requires_key": true,
+                                                              "key_id": "gemini",
+                                                              "key_get_link": "https://aistudio.google.com/app/apikey",
+                                                              "key_get_description": Translation.tr("**Pricing**: free. Data used for training.\n\n**Instructions**: Log into Google account, allow AI Studio to create Google Cloud project or whatever it asks, go back and click Get API key"),
+                                                              "api_format": "gemini",
         }),
-        "gemini-3-flash": aiModelComponent.createObject(this, {
-            "name": "Gemini 3 Flash",
+        "gemini-3-flash-preview": aiModelComponent.createObject(this, {
+            "name": "Gemini 3 Flash Preview",
             "icon": "google-gemini-symbolic",
-            "description": Translation.tr("Online | Google's model\nPro-level intelligence at the speed and pricing of Flash."),
-            "homepage": "https://aistudio.google.com",
-            "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent",
-            "model": "gemini-3-flash-preview",
-            "requires_key": true,
-            "key_id": "gemini",
-            "key_get_link": "https://aistudio.google.com/app/apikey",
-            "key_get_description": Translation.tr("**Pricing**: free. Data used for training.\n\n**Instructions**: Log into Google account, allow AI Studio to create Google Cloud project or whatever it asks, go back and click Get API key"),
-            "api_format": "gemini",
+            "description": Translation.tr("Онлайн | Модель Google\nБолее легкая модель, менее умная и дорогая, чем Gemini 3 Pro Preview, но значительно дороже, чем Gemini 2.5 Flash Lite."),
+                                                                "homepage": "https://aistudio.google.com",
+                                                                "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:streamGenerateContent",
+                                                                "model": "gemini-3-flash-preview",
+                                                                "requires_key": true,
+                                                                "key_id": "gemini",
+                                                                "key_get_link": "https://aistudio.google.com/app/apikey",
+                                                                "key_get_description": Translation.tr("**Pricing**: free. Data used for training.\n\n**Instructions**: Log into Google account, allow AI Studio to create Google Cloud project or whatever it asks, go back and click Get API key"),
+                                                                "api_format": "gemini",
         }),
-        "mistral-medium-3": aiModelComponent.createObject(this, {
-            "name": "Mistral Medium 3",
-            "icon": "mistral-symbolic",
-            "description": Translation.tr("Online | %1's model | Delivers fast, responsive and well-formatted answers. Disadvantages: not very eager to do stuff; might make up unknown function calls").arg("Mistral"),
-            "homepage": "https://mistral.ai/news/mistral-medium-3",
-            "endpoint": "https://api.mistral.ai/v1/chat/completions",
-            "model": "mistral-medium-2505",
-            "requires_key": true,
-            "key_id": "mistral",
-            "key_get_link": "https://console.mistral.ai/api-keys",
-            "key_get_description": Translation.tr("**Instructions**: Log into Mistral account, go to Keys on the sidebar, click Create new key"),
-            "api_format": "mistral",
+        "gemini-2.5-flash-lite": aiModelComponent.createObject(this, {
+            "name": "Gemini 2.5 Flash-Lite",
+            "icon": "google-gemini-symbolic",
+            "description": Translation.tr("Онлайн | Модель Google\nОчень дешевая и быстрая модель, но не очень умная, подходит для повседневного использования."),
+                                                               "homepage": "https://aistudio.google.com",
+                                                               "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:streamGenerateContent",
+                                                               "model": "gemini-2.5-flash-lite",
+                                                               "requires_key": true,
+                                                               "key_id": "gemini",
+                                                               "key_get_link": "https://api.proxyapi.ru",
+                                                               "key_get_description": Translation.tr("**Pricing**: free. Data used for training.\n\n**Instructions**: Log into Google account, allow AI Studio to create Google Cloud project or whatever it asks, go back and click Get API key"),
+                                                               "api_format": "gemini",
         }),
     }
     property var modelList: Object.keys(root.models)
@@ -362,12 +362,12 @@ Singleton {
                         const safeModelName = root.safeModelName(model);
                         root.addModel(safeModelName, {
                             "name": guessModelName(model),
-                            "icon": guessModelLogo(model),
-                            "description": Translation.tr("Local Ollama model | %1").arg(model),
-                            "homepage": `https://ollama.com/library/${model}`,
-                            "endpoint": "http://localhost:11434/v1/chat/completions",
-                            "model": model,
-                            "requires_key": false,
+                                      "icon": guessModelLogo(model),
+                                      "description": Translation.tr("Local Ollama model | %1").arg(model),
+                                      "homepage": `https://ollama.com/library/${model}`,
+                                      "endpoint": "http://localhost:11434/v1/chat/completions",
+                                      "model": model,
+                                      "requires_key": false,
                         })
                     });
 
@@ -388,8 +388,8 @@ Singleton {
             onStreamFinished: {
                 if (text.length === 0) return;
                 root.defaultPrompts = text.split("\n")
-                    .filter(fileName => fileName.endsWith(".md") || fileName.endsWith(".txt"))
-                    .map(fileName => `${Directories.defaultAiPrompts}/${fileName}`)
+                .filter(fileName => fileName.endsWith(".md") || fileName.endsWith(".txt"))
+                .map(fileName => `${Directories.defaultAiPrompts}/${fileName}`)
             }
         }
     }
@@ -402,8 +402,8 @@ Singleton {
             onStreamFinished: {
                 if (text.length === 0) return;
                 root.userPrompts = text.split("\n")
-                    .filter(fileName => fileName.endsWith(".md") || fileName.endsWith(".txt"))
-                    .map(fileName => `${Directories.userAiPrompts}/${fileName}`)
+                .filter(fileName => fileName.endsWith(".md") || fileName.endsWith(".txt"))
+                .map(fileName => `${Directories.userAiPrompts}/${fileName}`)
             }
         }
     }
@@ -416,8 +416,8 @@ Singleton {
             onStreamFinished: {
                 if (text.length === 0) return;
                 root.savedChats = text.split("\n")
-                    .filter(fileName => fileName.endsWith(".json"))
-                    .map(fileName => `${Directories.aiChats}/${fileName}`)
+                .filter(fileName => fileName.endsWith(".json"))
+                .map(fileName => `${Directories.aiChats}/${fileName}`)
             }
         }
     }
@@ -467,8 +467,8 @@ Singleton {
     function addApiKeyAdvice(model) {
         root.addMessage(
             Translation.tr('To set an API key, pass it with the %4 command\n\nTo view the key, pass "get" with the command<br/>\n\n### For %1:\n\n**Link**: %2\n\n%3')
-                .arg(model.name).arg(model.key_get_link).arg(model.key_get_description ?? Translation.tr("<i>No further instruction provided</i>")).arg("/key"), 
-            Ai.interfaceRole
+            .arg(model.name).arg(model.key_get_link).arg(model.key_get_description ?? Translation.tr("<i>No further instruction provided</i>")).arg("/key"),
+                        Ai.interfaceRole
         );
     }
 
@@ -478,28 +478,28 @@ Singleton {
 
     function setModel(modelId, feedback = true, setPersistentState = true) {
         if (!modelId) modelId = ""
-        modelId = modelId.toLowerCase()
-        if (modelList.indexOf(modelId) !== -1) {
-            const model = models[modelId]
-            // See if policy prevents online models
-            if (Config.options.policies.ai === 2 && !model.endpoint.includes("localhost")) {
-                root.addMessage(
-                    Translation.tr("Online models disallowed\n\nControlled by `policies.ai` config option"),
-                    root.interfaceRole
-                );
-                return;
-            }
-            if (setPersistentState) Persistent.states.ai.model = modelId;
-            if (feedback) root.addMessage(Translation.tr("Model set to %1").arg(model.name), root.interfaceRole);
-            if (model.requires_key) {
-                // If key not there show advice
-                if (root.apiKeysLoaded && (!root.apiKeys[model.key_id] || root.apiKeys[model.key_id].length === 0)) {
-                    root.addApiKeyAdvice(model)
+            modelId = modelId.toLowerCase()
+            if (modelList.indexOf(modelId) !== -1) {
+                const model = models[modelId]
+                // See if policy prevents online models
+                if (Config.options.policies.ai === 2 && !model.endpoint.includes("localhost")) {
+                    root.addMessage(
+                        Translation.tr("Online models disallowed\n\nControlled by `policies.ai` config option"),
+                                    root.interfaceRole
+                    );
+                    return;
                 }
+                if (setPersistentState) Persistent.states.ai.model = modelId;
+                if (feedback) root.addMessage(Translation.tr("Model set to %1").arg(model.name), root.interfaceRole);
+                if (model.requires_key) {
+                    // If key not there show advice
+                    if (root.apiKeysLoaded && (!root.apiKeys[model.key_id] || root.apiKeys[model.key_id].length === 0)) {
+                        root.addApiKeyAdvice(model)
+                    }
+                }
+            } else {
+                if (feedback) root.addMessage(Translation.tr("Invalid model. Supported: \n```\n") + modelList.join("\n```\n```\n"), Ai.interfaceRole) + "\n```"
             }
-        } else {
-            if (feedback) root.addMessage(Translation.tr("Invalid model. Supported: \n```\n") + modelList.join("\n```\n```\n"), Ai.interfaceRole) + "\n```"
-        }
     }
 
     function setTool(tool) {
@@ -510,7 +510,7 @@ Singleton {
         Config.options.ai.tool = tool;
         return true;
     }
-    
+
     function getTemperature() {
         return root.temperature;
     }
@@ -591,75 +591,75 @@ Singleton {
 
             // Fetch API keys if needed
             if (model?.requires_key && !KeyringStorage.loaded) KeyringStorage.fetchKeyringData();
-            
+
             requester.currentStrategy = root.currentApiStrategy;
             requester.currentStrategy.reset(); // Reset strategy state
 
             /* Put API key in environment variable */
             if (model.requires_key) requester.environment[`${root.apiKeyEnvVarName}`] = root.apiKeys ? (root.apiKeys[model.key_id] ?? "") : ""
 
-            /* Build endpoint, request data */
-            const endpoint = root.currentApiStrategy.buildEndpoint(model);
-            const messageArray = root.messageIDs.map(id => root.messageByID[id]);
-            const filteredMessageArray = messageArray.filter(message => message.role !== Ai.interfaceRole);
-            const data = root.currentApiStrategy.buildRequestData(model, filteredMessageArray, root.systemPrompt, root.temperature, root.tools[model.api_format][root.currentTool], root.pendingFilePath);
-            // console.log("[Ai] Request data: ", JSON.stringify(data, null, 2));
+                /* Build endpoint, request data */
+                const endpoint = root.currentApiStrategy.buildEndpoint(model);
+                const messageArray = root.messageIDs.map(id => root.messageByID[id]);
+                const filteredMessageArray = messageArray.filter(message => message.role !== Ai.interfaceRole);
+                const data = root.currentApiStrategy.buildRequestData(model, filteredMessageArray, root.systemPrompt, root.temperature, root.tools[model.api_format][root.currentTool], root.pendingFilePath);
+                // console.log("[Ai] Request data: ", JSON.stringify(data, null, 2));
 
-            let requestHeaders = {
-                "Content-Type": "application/json",
-            }
-            
-            /* Create local message object */
-            requester.message = root.aiMessageComponent.createObject(root, {
-                "role": "assistant",
-                "model": currentModelId,
-                "content": "",
-                "rawContent": "",
-                "thinking": true,
-                "done": false,
-            });
-            const id = idForMessage(requester.message);
-            root.messageIDs = [...root.messageIDs, id];
-            root.messageByID[id] = requester.message;
+                let requestHeaders = {
+                    "Content-Type": "application/json",
+                }
 
-            /* Build header string for curl */ 
-            let headerString = Object.entries(requestHeaders)
+                /* Create local message object */
+                requester.message = root.aiMessageComponent.createObject(root, {
+                    "role": "assistant",
+                    "model": currentModelId,
+                    "content": "",
+                    "rawContent": "",
+                    "thinking": true,
+                    "done": false,
+                });
+                const id = idForMessage(requester.message);
+                root.messageIDs = [...root.messageIDs, id];
+                root.messageByID[id] = requester.message;
+
+                /* Build header string for curl */
+                let headerString = Object.entries(requestHeaders)
                 .filter(([k, v]) => v && v.length > 0)
                 .map(([k, v]) => `-H '${k}: ${v}'`)
                 .join(' ');
 
-            // console.log("Request headers: ", JSON.stringify(requestHeaders));
-            // console.log("Header string: ", headerString);
+                // console.log("Request headers: ", JSON.stringify(requestHeaders));
+                // console.log("Header string: ", headerString);
 
-            /* Get authorization header from strategy */
-            const authHeader = requester.currentStrategy.buildAuthorizationHeader(root.apiKeyEnvVarName);
-            
-            /* Script shebang */
-            const scriptShebang = "#!/usr/bin/env bash\n";
+                /* Get authorization header from strategy */
+                const authHeader = requester.currentStrategy.buildAuthorizationHeader(root.apiKeyEnvVarName);
 
-            /* Create extra setup when there's an attached file */
-            let scriptFileSetupContent = ""
-            if (root.pendingFilePath && root.pendingFilePath.length > 0) {
-                requester.message.localFilePath = root.pendingFilePath;
-                scriptFileSetupContent = requester.currentStrategy.buildScriptFileSetup(root.pendingFilePath);
-                root.pendingFilePath = ""
-            }
+                /* Script shebang */
+                const scriptShebang = "#!/usr/bin/env bash\n";
 
-            /* Create command string */
-            let scriptRequestContent = ""
-            scriptRequestContent += `curl --no-buffer "${endpoint}"`
+                /* Create extra setup when there's an attached file */
+                let scriptFileSetupContent = ""
+                if (root.pendingFilePath && root.pendingFilePath.length > 0) {
+                    requester.message.localFilePath = root.pendingFilePath;
+                    scriptFileSetupContent = requester.currentStrategy.buildScriptFileSetup(root.pendingFilePath);
+                    root.pendingFilePath = ""
+                }
+
+                /* Create command string */
+                let scriptRequestContent = ""
+                scriptRequestContent += `curl --no-buffer "${endpoint}"`
                 + ` ${headerString}`
                 + (authHeader ? ` ${authHeader}` : "")
                 + ` --data '${CF.StringUtils.shellSingleQuoteEscape(JSON.stringify(data))}'`
                 + "\n"
-            
-            /* Send the request */
-            const scriptContent = requester.currentStrategy.finalizeScriptContent(scriptShebang + scriptFileSetupContent + scriptRequestContent)
-            const shellScriptPath = CF.FileUtils.trimFileProtocol(root.requestScriptFilePath)
-            requesterScriptFile.path = Qt.resolvedUrl(shellScriptPath)
-            requesterScriptFile.setText(scriptContent)
-            requester.command = baseCommand.concat([shellScriptPath]);
-            requester.running = true
+
+                /* Send the request */
+                const scriptContent = requester.currentStrategy.finalizeScriptContent(scriptShebang + scriptFileSetupContent + scriptRequestContent)
+                const shellScriptPath = CF.FileUtils.trimFileProtocol(root.requestScriptFilePath)
+                requesterScriptFile.path = Qt.resolvedUrl(shellScriptPath)
+                requesterScriptFile.setText(scriptContent)
+                requester.command = baseCommand.concat([shellScriptPath]);
+                requester.running = true
         }
 
         stdout: SplitParser {
@@ -685,7 +685,7 @@ Singleton {
                     if (result.finished) {
                         requester.markDone();
                     }
-                    
+
                 } catch (e) {
                     console.log("[AI] Could not parse response: ", e);
                     requester.message.rawContent += data;
@@ -696,7 +696,7 @@ Singleton {
 
         onExited: (exitCode, exitStatus) => {
             const result = requester.currentStrategy.onRequestFinished(requester.message);
-            
+
             if (result.finished) {
                 requester.markDone();
             } else if (!requester.message.done) {
@@ -736,12 +736,12 @@ Singleton {
         return aiMessageComponent.createObject(root, {
             "role": "user",
             "content": `[[ Output of ${name} ]]${includeOutputInChat ? ("\n\n<think>\n" + output + "\n</think>") : ""}`,
-            "rawContent": `[[ Output of ${name} ]]${includeOutputInChat ? ("\n\n<think>\n" + output + "\n</think>") : ""}`,
-            "functionName": name,
-            "functionResponse": output,
-            "thinking": false,
-            "done": true,
-            // "visibleToUser": false,
+                                               "rawContent": `[[ Output of ${name} ]]${includeOutputInChat ? ("\n\n<think>\n" + output + "\n</think>") : ""}`,
+                                               "functionName": name,
+                                               "functionResponse": output,
+                                               "thinking": false,
+                                               "done": true,
+                                               // "visibleToUser": false,
         });
     }
 

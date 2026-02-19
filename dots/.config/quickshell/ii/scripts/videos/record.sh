@@ -29,7 +29,7 @@ cd "$RECORDING_DIR" || exit
 # parse --region <value> without modifying $@ so other flags like --fullscreen still work
 ARGS=("$@")
 MANUAL_REGION=""
-SOUND_FLAG=0
+SOUND_FLAG=1
 FULLSCREEN_FLAG=0
 for ((i=0;i<${#ARGS[@]};i++)); do
     if [[ "${ARGS[i]}" == "--region" ]]; then
