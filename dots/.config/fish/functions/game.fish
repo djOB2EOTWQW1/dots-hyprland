@@ -43,90 +43,90 @@ set -g GAME_NV_ENV \
     "__GLX_VENDOR_LIBRARY_NAME=nvidia" \
     "__VK_LAYER_NV_optimus=NVIDIA_only"
 
-set -g GAME_EXCLUDE_NAMES "applications" "helper" "ii-original-dots-backup" "portproton" "music" "video" "undefined.bak"
-
 set -g GAME_PATHS
 set -g GAME_NAMES
 
-function __build_game_index --description 'Сканирует GAME_DIRS и заполняет GAME_PATHS / GAME_NAMES'
-    # Очистить
+function __find_launcher --argument-names dir --description 'Находит первый исполняемый файл (.sh / .x86_64 / .AppImage) с учетом правил'
+    if test -f "$dir"
+        echo "$dir"
+        return 0
+    end
+
+    if not test -d "$dir"
+        echo "$dir"
+        return 1
+    end
+
+    set -l dir_base (basename -- "$dir" | string lower)
+
+    for ext in .sh .x86_64 .AppImage
+        set -l files
+        for file in "$dir"/*$ext
+            if test -f "$file" -a -x "$file"
+                set files $files "$file"
+            end
+        end
+
+        if test (count $files) -eq 0
+            continue
+        end
+
+        if string match -q -- '*.AppImage' "$files[1]"
+            # Для .AppImage игнорируем проверку, берем первый
+            echo $files[1]
+            return 0
+        else
+            # Для .sh и .x86_64
+            if test (count $files) -eq 1
+                # Если только один, берем его без проверки
+                echo $files[1]
+                return 0
+            else
+                # Если несколько, проверяем совпадение имени без учета регистра
+                for file in $files
+                    set -l file_base (basename -- "$file" | string replace --regex '\Q'$ext'\E$' '' | string lower)
+                    if test "$file_base" = "$dir_base"
+                        echo "$file"
+                        return 0
+                    end
+                end
+                # Если ни один не совпадает, продолжаем к следующему ext
+            end
+        end
+    end
+
+    echo "$dir"  # если ничего не нашли — возвращаем саму папку
+    return 1
+end
+
+function __build_game_index --description 'Сканирует GAME_DIRS и заполняет GAME_PATHS / GAME_NAMES (только валидные)'
     set -g GAME_PATHS
     set -g GAME_NAMES
 
     for entry in $GAME_DIRS
-        set -l path $entry
-        set -l base (basename -- "$path")
-        set -l lower_base (string lower -- $base)
+        set -l launcher (__find_launcher "$entry")
 
-        set -l skip_flag 0
-        for ex in $GAME_EXCLUDE_NAMES
-            if test (string match -q "*$ex*" -- $lower_base)
-                set skip_flag 1
-                break
-            end
-        end
-        if test $skip_flag -eq 1
+        if test $status -ne 0
+            # Пропускаем игру, если лаунчер не найден
             continue
         end
 
-        if test -f "$path"
-            set -g GAME_PATHS $GAME_PATHS "$path"
-            set -g GAME_NAMES $GAME_NAMES "$base"
+        # Дополнительная проверка существования и исполняемости
+        if not test -e "$launcher" -a -x "$launcher"
             continue
         end
 
-        if test -d "$path"
-            set -l launcher ""
-            for cand in "$path"/game.sh "$path"/launch.sh "$path"/run.sh "$path"/start.sh "$path"/renpy.sh "$path"/(basename "$path").sh
-                if test -f "$cand" -a -x "$cand"
-                    set launcher "$cand"
-                    break
-                end
-            end
-            if test -z "$launcher"
-                for f in "$path"/*.sh
-                    if test -f "$f" -a -x "$f"
-                        set launcher "$f"
-                        break
-                    end
-                end
-            end
-            if test -z "$launcher"
-                for f in "$path"/*.x86_64
-                    if test -f "$f" -a -x "$f"
-                        set launcher "$f"
-                        break
-                    end
-                end
-            end
-            if test -z "$launcher"
-                for f in "$path"/*.AppImage
-                    if test -f "$f" -a -x "$f"
-                        set launcher "$f"
-                        break
-                    end
-                end
-            end
-            if test -n "$launcher"
-                set -g GAME_PATHS $GAME_PATHS "$launcher"
-                set -g GAME_NAMES $GAME_NAMES "$base"
-            else
-                # нет явного лаунчера — добавим директорию для информативности
-                set -g GAME_PATHS $GAME_PATHS "$path"
-                set -g GAME_NAMES $GAME_NAMES "$base"
-            end
-            continue
-        end
-
-        set -g GAME_PATHS $GAME_PATHS "$path"
+        set -l base (basename -- "$entry")
+        set -g GAME_PATHS $GAME_PATHS "$launcher"
         set -g GAME_NAMES $GAME_NAMES "$base"
     end
 
+    # Перестраиваем автодополнение
     complete -c game -e 2>/dev/null
 
     set -l total (count $GAME_NAMES)
     for i in (seq 1 $total)
-        complete -c game -a (string escape $i) -d "$GAME_NAMES[$i]" -f
+        complete -c game -a "$i" -d "$GAME_NAMES[$i]" -f
     end
 end
 
@@ -167,27 +167,12 @@ function game --description 'game <номер> — запустить игру'
     end
 
     if test -d "$target"
-        set -l launcher ""
-        for cand in "$target"/game.sh "$target"/launch.sh "$target"/run.sh "$target"/start.sh "$target"/renpy.sh "$target"/(basename "$target").sh
-            if test -f "$cand" -a -x "$cand"
-                set launcher "$cand"
-                break
-            end
-        end
-        if test -z "$launcher"
-            for f in "$target"/*.sh
-                if test -f "$f" -a -x "$f"
-                    set launcher "$f"
-                    break
-                end
-            end
-        end
-
-        if test -n "$launcher"
-            set target $launcher
-        else
+        set -l launcher (__find_launcher "$target")
+        if test "$launcher" = "$target"
             echo "Не найден исполняемый файл в папке: $target"
             return 1
+        else
+            set target "$launcher"
         end
     end
 
