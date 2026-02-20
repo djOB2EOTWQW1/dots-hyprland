@@ -55,7 +55,7 @@ Scope { // Scope
 
     function togglePin() {
         if (!root.pin) pinWithFunnyHyprlandWorkaroundProc.doIt()
-        else root.pin = !root.pin;
+            else root.pin = !root.pin;
     }
 
     Component.onCompleted: {
@@ -82,11 +82,11 @@ Scope { // Scope
     Loader {
         id: sidebarLoader
         active: true
-        
+
         sourceComponent: PanelWindow { // Window
             id: panelWindow
             visible: GlobalStates.sidebarLeftOpen
-            
+
             property bool extend: false
             property real sidebarWidth: panelWindow.extend ? Appearance.sizes.sidebarWidthExtended : Appearance.sizes.sidebarWidth
             property var contentParent: sidebarLeftBackground
@@ -181,7 +181,7 @@ Scope { // Scope
             onVisibleChanged: {
                 if (!visible) GlobalStates.sidebarLeftOpen = false;
             }
-            
+
             Rectangle {
                 id: detachedSidebarBackground
                 anchors.fill: parent
