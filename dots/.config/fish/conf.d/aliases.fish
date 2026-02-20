@@ -10,8 +10,6 @@ alias ff fastfetch
 alias mtd exiftool
 alias mtdC "exiftool -overwrite_original -all="
 alias blyat "sudo archarchive"
-alias help "cat $HOME/helper"
-alias wifi "nmcli device wifi --ask connect POCO\ F5 password ttRVF13yH."
 alias connect "ssh -p 10022 root@213.21.242.211"
 alias wipe 'cliphist wipe'
 alias unlock "faillock --user msi --reset"
