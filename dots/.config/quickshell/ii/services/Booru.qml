@@ -1,10 +1,9 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 
-import "root:/modules/common"
+import qs.modules.common
+import qs.services
 import Quickshell;
-import Quickshell.Io;
-import Qt.labs.platform
 import QtQuick;
 
 /**
@@ -15,24 +14,20 @@ Singleton {
     property Component booruResponseDataComponent: BooruResponseData {}
 
     signal tagSuggestion(string query, var suggestions)
+    signal responseFinished()
 
-    property string failMessage: qsTr("That didn't work. Tips:\n- Check your tags and NSFW settings\n- If you don't have a tag in mind, type a page number")
+    property string failMessage: Translation.tr("That didn't work. Tips:\n- Check your tags and NSFW settings\n- If you don't have a tag in mind, type a page number")
     property var responses: []
     property int runningRequests: 0
     property var defaultUserAgent: Config.options?.networking?.userAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
     property var providerList: Object.keys(providers).filter(provider => provider !== "system" && providers[provider].api)
-
-    // Gelbooru API credentials
-    property string gelbooruApiKey: "your api" //exemple
-    property string gelbooruUserId: "your id" //exemple
-
     property var providers: {
-        "system": { "name": qsTr("System") },
+        "system": { "name": Translation.tr("System") },
         "yandere": {
             "name": "yande.re",
             "url": "https://yande.re",
             "api": "https://yande.re/post.json",
-            "description": qsTr("All-rounder | Good quality, decent quantity"),
+            "description": Translation.tr("All-rounder | Good quality, decent quantity"),
             "mapFunc": (response) => {
                 return response.map(item => {
                     return {
@@ -52,7 +47,7 @@ Singleton {
                     }
                 })
             },
-            "tagSearchTemplate": "https://yande.re/tag.json?order=count&name={{query}}*",
+            "tagSearchTemplate": "https://yande.re/tag.json?order=count&limit=10&name={{query}}*",
             "tagMapFunc": (response) => {
                 return response.map(item => {
                     return {
@@ -64,9 +59,9 @@ Singleton {
         },
         "konachan": {
             "name": "Konachan",
-            "url": "https://konachan.com",
-            "api": "https://konachan.com/post.json",
-            "description": qsTr("For desktop wallpapers | Good quality"),
+            "url": "https://konachan.net",
+            "api": "https://konachan.net/post.json",
+            "description": Translation.tr("For desktop wallpapers | Good quality"),
             "mapFunc": (response) => {
                 return response.map(item => {
                     return {
@@ -86,7 +81,7 @@ Singleton {
                     }
                 })
             },
-            "tagSearchTemplate": "https://konachan.com/tag.json?order=count&name={{query}}*",
+            "tagSearchTemplate": "https://konachan.net/tag.json?order=count&limit=10&name={{query}}*",
             "tagMapFunc": (response) => {
                 return response.map(item => {
                     return {
@@ -100,7 +95,7 @@ Singleton {
             "name": "Zerochan",
             "url": "https://www.zerochan.net",
             "api": "https://www.zerochan.net/?json",
-            "description": qsTr("Clean stuff | Excellent quality, no NSFW"),
+            "description": Translation.tr("Clean stuff | Excellent quality, no NSFW"),
             "mapFunc": (response) => {
                 response = response.items
                 return response.map(item => {
@@ -127,7 +122,7 @@ Singleton {
             "name": "Danbooru",
             "url": "https://danbooru.donmai.us",
             "api": "https://danbooru.donmai.us/posts.json",
-            "description": qsTr("The popular one | Best quantity, but quality can vary wildly"),
+            "description": Translation.tr("The popular one | Best quantity, but quality can vary wildly"),
             "mapFunc": (response) => {
                 return response.map(item => {
                     return {
@@ -147,7 +142,7 @@ Singleton {
                     }
                 })
             },
-            "tagSearchTemplate": "https://danbooru.donmai.us/tags.json?search[name_matches]={{query}}*",
+            "tagSearchTemplate": "https://danbooru.donmai.us/tags.json?limit=10&search[name_matches]={{query}}*",
             "tagMapFunc": (response) => {
                 return response.map(item => {
                     return {
@@ -160,37 +155,30 @@ Singleton {
         "gelbooru": {
             "name": "Gelbooru",
             "url": "https://gelbooru.com",
-            "api": "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1",
-            "description": qsTr("The hentai one | Great quantity, a lot of NSFW, quality varies wildly"),
+            "api": "https://gelbooru.com/index.php?page=dapi&s=post&q=index&json=1&api_key=&user_id=",
+            "description": Translation.tr("The hentai one | Great quantity, a lot of NSFW, quality varies wildly"),
             "mapFunc": (response) => {
-                if (!response || !response.post) return [];
-                return response.post.map(item => {
-                    const ratingMap = {
-                        'general': 's',
-                        'sensitive': 'q',
-                        'questionable': 'q',
-                        'explicit': 'e'
-                    };
+                response = response.post
+                return response.map(item => {
                     return {
                         "id": item.id,
                         "width": item.width,
                         "height": item.height,
                         "aspect_ratio": item.width / item.height,
                         "tags": item.tags,
-                        "rating": ratingMap[item.rating] || 'u',
-                        "is_nsfw": (item.rating !== 'general'),
-                                         "md5": item.md5,
-                                         "preview_url": item.preview_url,
-                                         "sample_url": item.sample_url || item.file_url,
-                                         "file_url": item.file_url,
-                                         "file_ext": item.file_url?.split('.').pop() || "jpg",
-                                         "source": getWorkingImageSource(item.source) || item.file_url,
+                        "rating": item.rating.replace('general', 's').charAt(0),
+                                    "is_nsfw": (item.rating != 's'),
+                                    "md5": item.md5,
+                                    "preview_url": item.preview_url,
+                                    "sample_url": item.sample_url ?? item.file_url,
+                                    "file_url": item.file_url,
+                                    "file_ext": item.file_url.split('.').pop(),
+                                    "source": getWorkingImageSource(item.source) ?? item.file_url,
                     }
                 })
             },
-            "tagSearchTemplate": "https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&orderby=count&name_pattern={{query}}%&api_key=" + root.gelbooruApiKey + "&user_id=" + root.gelbooruUserId,
+            "tagSearchTemplate": "https://gelbooru.com/index.php?page=dapi&s=tag&q=index&json=1&orderby=count&limit=10&name_pattern={{query}}%&api_key=&user_id=",
             "tagMapFunc": (response) => {
-                if (!response || !response.tag) return [];
                 return response.tag.map(item => {
                     return {
                         "name": item.name,
@@ -203,7 +191,7 @@ Singleton {
             "name": "waifu.im",
             "url": "https://waifu.im",
             "api": "https://api.waifu.im/search",
-            "description": qsTr("Waifus only | Excellent quality, limited quantity"),
+            "description": Translation.tr("Waifus only | Excellent quality, limited quantity"),
             "mapFunc": (response) => {
                 response = response.images
                 return response.map(item => {
@@ -216,11 +204,11 @@ Singleton {
                                     "rating": item.is_nsfw ? "e" : "s",
                                     "is_nsfw": item.is_nsfw,
                                     "md5": item.md5,
-                                    "preview_url": item.sample_url ?? item.url,
-                                    "sample_url": item.url,
-                                    "file_url": item.url,
-                                    "file_ext": item.extension,
-                                    "source": getWorkingImageSource(item.source) ?? item.url,
+                                    "preview_url": item.sample_url ?? item.url, // preview_url just says access denied (maybe i fucked up and sent too many requests idk)
+                "sample_url": item.url,
+                "file_url": item.url,
+                "file_ext": item.extension,
+                "source": getWorkingImageSource(item.source) ?? item.url,
                     }
                 })
             },
@@ -234,7 +222,7 @@ Singleton {
             "name": "Alcy",
             "url": "https://t.alcy.cc",
             "api": "https://t.alcy.cc/",
-            "description": qsTr("Large images | God tier quality, no NSFW."),
+            "description": Translation.tr("Large images | God tier quality, no NSFW."),
             "fixedTags": [
                 {
                     "name": "ycy",
@@ -262,10 +250,12 @@ Singleton {
                 },
             ],
             "manualParseFunc": (responseText) => {
+                // Alcy just returns image links, each on a new line
                 const lines = responseText.trim().split('\n');
                 return lines.map(line => {
                     return {
                         "id": Qt.md5(line),
+                                 // Alcy doesn't provide dimensions and images are often of god resolution
                                  "width": 1000,
                                  "height": 1000,
                                  "aspect_ratio": 1,
@@ -296,10 +286,10 @@ Singleton {
         provider = provider.toLowerCase()
         if (providerList.indexOf(provider) !== -1) {
             Persistent.states.booru.provider = provider
-            root.addSystemMessage(qsTr("Provider set to ") + providers[provider].name
-            + (provider == "zerochan" ? qsTr(". Notes for Zerochan:\n- You must enter a color\n- Set your zerochan username in `sidebar.booru.zerochan.username` config option. You [might be banned for not doing so](https://www.zerochan.net/api#:~:text=The%20request%20may%20still%20be%20completed%20successfully%20without%20this%20custom%20header%2C%20but%20your%20project%20may%20be%20banned%20for%20being%20anonymous.)!") : ""))
+            root.addSystemMessage(Translation.tr("Provider set to ") + providers[provider].name
+            + (provider == "zerochan" ? Translation.tr(". Notes for Zerochan:\n- You must enter a color\n- Set your zerochan username in `sidebar.booru.zerochan.username` config option. You [might be banned for not doing so](https://www.zerochan.net/api#:~:text=The%20request%20may%20still%20be%20completed%20successfully%20without%20this%20custom%20header%2C%20but%20your%20project%20may%20be%20banned%20for%20being%20anonymous.)!") : ""))
         } else {
-            root.addSystemMessage(qsTr("Invalid API provider. Supported: \n- ") + providerList.join("\n- "))
+            root.addSystemMessage(Translation.tr("Invalid API provider. Supported: \n- ") + providerList.join("\n- "))
         }
     }
 
@@ -322,30 +312,16 @@ Singleton {
         var baseUrl = provider.api
         var url = baseUrl
         var tagString = tags.join(" ")
-
-        // Gelbooru requires at least one tag
-        if (currentProvider === "gelbooru" && tags.length === 0) {
-            tagString = "rating:general";
-        }
-
         if (!nsfw && !(["zerochan", "waifu.im", "t.alcy.cc"].includes(currentProvider))) {
             if (currentProvider == "gelbooru")
                 tagString += " rating:general";
             else
                 tagString += " rating:safe";
         }
-
         var params = []
-
-        // Add Gelbooru API credentials if needed
-        if (currentProvider === "gelbooru") {
-            params.push("api_key=" + root.gelbooruApiKey);
-            params.push("user_id=" + root.gelbooruUserId);
-        }
-
         // Tags & limit
         if (currentProvider === "zerochan") {
-            params.push("c=" + tagString)
+            params.push("c=" + tagString) // zerochan doesn't have search in api, so we use color
             params.push("l=" + limit)
             params.push("s=" + "fav")
             params.push("t=" + 1)
@@ -356,8 +332,8 @@ Singleton {
             tagsArray.forEach(tag => {
                 params.push("included_tags=" + encodeURIComponent(tag));
             });
-            params.push("limit=" + Math.min(limit, 30))
-            params.push("is_nsfw=" + (nsfw ? "null" : "false"))
+            params.push("limit=" + Math.min(limit, 30)) // Only admin can do > 30
+            params.push("is_nsfw=" + (nsfw ? "null" : "false")) // null is random
         }
         else if (currentProvider === "t.alcy.cc") {
             url += tagString
@@ -368,7 +344,7 @@ Singleton {
             params.push("tags=" + encodeURIComponent(tagString))
             params.push("limit=" + limit)
             if (currentProvider == "gelbooru") {
-                params.push("pid=" + (page - 1))
+                params.push("pid=" + page)
             }
             else {
                 params.push("page=" + page)
@@ -383,12 +359,6 @@ Singleton {
     }
 
     function makeRequest(tags, nsfw=false, limit=20, page=1) {
-        // Gelbooru requires at least one tag
-        if (currentProvider === "gelbooru" && tags.length === 0) {
-            root.addSystemMessage(qsTr("Gelbooru requires at least one tag. Try 'rating:safe' or 'rating:general'"))
-            return;
-        }
-
         var url = constructRequestUrl(tags, nsfw, limit, page)
         console.log("[Booru] Making request to " + url)
 
@@ -405,7 +375,7 @@ Singleton {
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                 try {
-                    console.log("[Booru] Raw response: " + xhr.responseText)
+                    // console.log("[Booru] Raw response: " + xhr.responseText)
                     const provider = providers[currentProvider]
                     let response;
                     if (provider.manualParseFunc) {
@@ -414,13 +384,12 @@ Singleton {
                         response = JSON.parse(xhr.responseText)
                         response = provider.mapFunc(response)
                     }
-                    console.log("[Booru] Mapped response: " + JSON.stringify(response))
+                    // console.log("[Booru] Mapped response: " + JSON.stringify(response))
                     newResponse.images = response
                     newResponse.message = response.length > 0 ? "" : root.failMessage
 
                 } catch (e) {
                     console.log("[Booru] Failed to parse response: " + e)
-                    console.log("[Booru] Response text: " + xhr.responseText)
                     newResponse.message = root.failMessage
                 } finally {
                     root.runningRequests--;
@@ -429,31 +398,26 @@ Singleton {
             }
             else if (xhr.readyState === XMLHttpRequest.DONE) {
                 console.log("[Booru] Request failed with status: " + xhr.status)
-                root.runningRequests--;
                 newResponse.message = root.failMessage
+                root.runningRequests--;
                 root.responses = [...root.responses, newResponse]
             }
+            root.responseFinished()
         }
 
         try {
+            // Required for danbooru
             if (currentProvider == "danbooru") {
                 xhr.setRequestHeader("User-Agent", defaultUserAgent)
             }
             else if (currentProvider == "zerochan") {
-                const zerochanUser = Config.options?.sidebar?.booru?.zerochan?.username;
-                xhr.setRequestHeader("User-Agent", zerochanUser ? `Desktop sidebar booru viewer - username: ${zerochanUser}` : defaultUserAgent)
+                const userAgent = Config.options?.sidebar?.booru?.zerochan?.username ? `Desktop sidebar booru viewer - username: ${Config.options.sidebar.booru.zerochan.username}` : defaultUserAgent
+                xhr.setRequestHeader("User-Agent", userAgent)
             }
-            else {
-                xhr.setRequestHeader("User-Agent", defaultUserAgent)
-            }
-
             root.runningRequests++;
             xhr.send()
         } catch (error) {
             console.log("Could not set User-Agent:", error)
-            root.runningRequests--;
-            newResponse.message = root.failMessage
-            root.responses = [...root.responses, newResponse]
         }
     }
 
@@ -479,8 +443,10 @@ Singleton {
             if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                 currentTagRequest = null
                 try {
+                    // console.log("[Booru] Raw response: " + xhr.responseText)
                     var response = JSON.parse(xhr.responseText)
                     response = provider.tagMapFunc(response)
+                    // console.log("[Booru] Mapped response: " + JSON.stringify(response))
                     root.tagSuggestion(query, response)
                 } catch (e) {
                     console.log("[Booru] Failed to parse response: " + e)
@@ -488,15 +454,12 @@ Singleton {
             }
             else if (xhr.readyState === XMLHttpRequest.DONE) {
                 console.log("[Booru] Request failed with status: " + xhr.status)
-                currentTagRequest = null
             }
         }
 
         try {
-            if (currentProvider == "danbooru" || currentProvider == "gelbooru") {
-                xhr.setRequestHeader("User-Agent", defaultUserAgent)
-            }
-            else {
+            // Required for danbooru
+            if (currentProvider == "danbooru") {
                 xhr.setRequestHeader("User-Agent", defaultUserAgent)
             }
             xhr.send()
