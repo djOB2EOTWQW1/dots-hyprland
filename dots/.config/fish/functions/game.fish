@@ -1,5 +1,13 @@
 #!/usr/bin/env fish
+
+#------------------------------------------------#
+# Вставить директории для игр через "\" Пример:  #
+#   "$HOME/.NSFW/Games/HaremHotel" \             #
+#   "$HOME/.NSFW/Native games/MIST"              #
+#------------------------------------------------#
+
 set -g GAME_DIRS \
+    #Native
     "$HOME/.NSFW/Games Linux/RenPy/AttackOnSurveyCorps" \
     "$HOME/.NSFW/Games Linux/RenPy/CosyCafe" \
     "$HOME/.NSFW/Games Linux/RenPy/CrimsonHigh" \
@@ -17,6 +25,7 @@ set -g GAME_DIRS \
     "$HOME/.NSFW/Games Linux/RenPy/LifesPayback" \
     "$HOME/.NSFW/Games Linux/RenPy/MagicalMishaps" \
     "$HOME/.NSFW/Games Linux/RenPy/MIST" \
+    "$HOME/.NSFW/Games Linux/RenPy/MonsterCollege" \
     "$HOME/.NSFW/Games Linux/RenPy/NekoParadise" \
     "$HOME/.NSFW/Games Linux/RenPy/NorikasCase" \
     "$HOME/.NSFW/Games Linux/RenPy/PhotoHunt" \
@@ -36,17 +45,42 @@ set -g GAME_DIRS \
     "$HOME/.NSFW/Games Linux/Unity/IN HEAT" \
     "$HOME/.NSFW/Games Linux/Unity/MyDystopianRobotGirlfriend" \
     "$HOME/.NSFW/Games Linux/Unity/PonyWaifuSim" \
-    "$HOME/.NSFW/Games Linux/Other/LonaRPG/usr/bin/LonaRPG_RUS_Launcher"
+    "$HOME/.NSFW/Games Linux/Other/LonaRPG/usr/bin/LonaRPG_RUS_Launcher" \
+    #PortProton (NOT NATIVE)
+    "$HOME/.NSFW/Games Windows(PortProton)/Other/Adulttale/" \
+    "$HOME/.NSFW/Games Windows(PortProton)/Other/DailyLivesofMyCountryside" \
+    "$HOME/.NSFW/Games Windows(PortProton)/Unity/HypnoAppV1" \
+    "$HOME/.NSFW/Games Windows(PortProton)/Unity/HypnoAppV2" \
+    "$HOME/.NSFW/Games Windows(PortProton)/Unity/LovelyCraftPistonTrap"
+
+#-------------------------------------------------------------------------------------------------------------#
+# Если у вас нет интегрированной графики, то удалите переменные оставив set -g GAME_NV_ENV                    #
+# Если у вас интегрированная графика + видеокарта от амд замените переменные для амд (не тестил)              #
+# Если игра запускается на интегрированной графике и вы хотите чтобы игра работала на дискретной видеокарте   #
+#-------------------------------------------------------------------------------------------------------------#
 
 set -g GAME_NV_ENV \
     "__NV_PRIME_RENDER_OFFLOAD=1" \
     "__GLX_VENDOR_LIBRARY_NAME=nvidia" \
     "__VK_LAYER_NV_optimus=NVIDIA_only"
 
+#-------------------------------------------------------------------------------------------------#
+# Если у вас portproton установленный через flatpak, то замените portproton на запуск от flatpak  #
+#-------------------------------------------------------------------------------------------------#
+
+set -g PORTPROTON_CMD portproton --launch
+
 set -g GAME_PATHS
 set -g GAME_NAMES
 
-function __find_launcher --argument-names dir --description 'Находит первый исполняемый файл (.sh / .x86_64 / .AppImage) с учетом правил'
+#------------------------------------------------------------------------------------------------------------#
+# Эта функция ищет подходящий лаунчер в указанной директории: либо нативный для Linux (.sh, .x86_64, .AppImage)#
+# либо Windows .exe для запуска через PortProton. Если директория - это файл, возвращает его сразу.          #
+# Приоритет: нативные лаунчеры, затем .exe. Если несколько, выбирает по совпадению имени с базовым именем     #
+# директории. Если ничего не найдено, возвращает саму директорию с ошибкой.                                  #
+#------------------------------------------------------------------------------------------------------------#
+
+function __find_launcher --argument-names dir --description 'Находит лаунчер: нативный или .exe для PortProton'
     if test -f "$dir"
         echo "$dir"
         return 0
@@ -59,6 +93,7 @@ function __find_launcher --argument-names dir --description 'Находит пе
 
     set -l dir_base (basename -- "$dir" | string lower)
 
+    # 1. Natuve Linux-launcher
     for ext in .sh .x86_64 .AppImage
         set -l files
         for file in "$dir"/*$ext
@@ -72,17 +107,13 @@ function __find_launcher --argument-names dir --description 'Находит пе
         end
 
         if string match -q -- '*.AppImage' "$files[1]"
-            # Для .AppImage игнорируем проверку, берем первый
             echo $files[1]
             return 0
         else
-            # Для .sh и .x86_64
             if test (count $files) -eq 1
-                # Если только один, берем его без проверки
                 echo $files[1]
                 return 0
             else
-                # Если несколько, проверяем совпадение имени без учета регистра
                 for file in $files
                     set -l file_base (basename -- "$file" | string replace --regex '\Q'$ext'\E$' '' | string lower)
                     if test "$file_base" = "$dir_base"
@@ -90,16 +121,46 @@ function __find_launcher --argument-names dir --description 'Находит пе
                         return 0
                     end
                 end
-                # Если ни один не совпадает, продолжаем к следующему ext
             end
         end
     end
 
-    echo "$dir"  # если ничего не нашли — возвращаем саму папку
+    # 2. WIndows .exe for PortProton
+    set -l exe_files
+    for file in "$dir"/*.exe
+        if test -f "$file"
+            set exe_files $exe_files "$file"
+        end
+    end
+
+    if test (count $exe_files) -gt 0
+        if test (count $exe_files) -eq 1
+            echo $exe_files[1]
+            return 0
+        else
+            for file in $exe_files
+                set -l name (basename -- "$file" | string replace -r '\.[eE][xX][eE]$' '' | string lower)
+                if test "$name" = "$dir_base"
+                    echo "$file"
+                    return 0
+                end
+            end
+            echo $exe_files[1]
+            return 0
+        end
+    end
+
+    echo "$dir"
     return 1
 end
 
-function __build_game_index --description 'Сканирует GAME_DIRS и заполняет GAME_PATHS / GAME_NAMES (только валидные)'
+#---------------------------------------------------------------------------------------------------------#
+# Эта функция сканирует все директории из GAME_DIRS, находит лаунчеры с помощью __find_launcher,          #
+# и заполняет глобальные переменные GAME_PATHS (пути к лаунчерам) и GAME_NAMES (имена директорий).        #
+# Затем настраивает автодополнение для команды game: стирает старое и добавляет номера с описаниями игр.  #
+#---------------------------------------------------------------------------------------------------------#
+
+function __build_game_index --description 'Сканирует GAME_DIRS и заполняет GAME_PATHS / GAME_NAMES'
     set -g GAME_PATHS
     set -g GAME_NAMES
 
@@ -107,12 +168,10 @@ function __build_game_index --description 'Сканирует GAME_DIRS и за�
         set -l launcher (__find_launcher "$entry")
 
         if test $status -ne 0
-            # Пропускаем игру, если лаунчер не найден
             continue
         end
 
-        # Дополнительная проверка существования и исполняемости
-        if not test -e "$launcher" -a -x "$launcher"
+        if not test -f "$launcher"
             continue
         end
 
@@ -121,7 +180,6 @@ function __build_game_index --description 'Сканирует GAME_DIRS и за�
         set -g GAME_NAMES $GAME_NAMES "$base"
     end
 
-    # Перестраиваем автодополнение
     complete -c game -e 2>/dev/null
 
     set -l total (count $GAME_NAMES)
@@ -132,7 +190,14 @@ end
 
 __build_game_index
 
-function game --description 'game <номер> — запустить игру'
+#--------------------------------------------------------------------------------------------------------#
+# Основная функция: game <номер> запускает игру по номеру из списка. Без аргументов выводит список игр.  #
+# С аргументом "refresh" обновляет индекс. Проверяет номер, находит лаунчер, запускает с учетом типа:    #
+# .exe через PortProton, нативные через env с GAME_NV_ENV. Дополнительные аргументы передаются дальше.   #
+# Запуск в фоне с setsid для отрыва от терминала.                                                        #
+#--------------------------------------------------------------------------------------------------------#
+
+function game --description 'game <номер> — запустить игру (PortProton AUR для .exe)'
     if test (count $argv) -eq 0
         printf "%3s  %s\n" "№" "ИМЯ"
         printf "%3s  %s\n" "---" "---------------------------"
@@ -176,7 +241,7 @@ function game --description 'game <номер> — запустить игру'
         end
     end
 
-    if not test -e "$target"
+    if not test -f "$target"
         echo "Целевой файл не найден: $target"
         return 1
     end
@@ -184,7 +249,10 @@ function game --description 'game <номер> — запустить игру'
     echo "Запускаю: $GAME_NAMES[$idx]"
     echo "Файл: $target"
 
-    if test -x "$target"
+    if string match -qi '*.exe' -- "$target"
+        echo "-> через PortProton"
+        setsid env $PORTPROTON_CMD "$target" $extra_args >/dev/null 2>&1 &
+    else if test -x "$target"
         setsid env $GAME_NV_ENV "$target" $extra_args >/dev/null 2>&1 &
     else
         setsid env $GAME_NV_ENV sh "$target" $extra_args >/dev/null 2>&1 &
